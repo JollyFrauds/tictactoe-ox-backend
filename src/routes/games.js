@@ -135,7 +135,8 @@ router.post('/join-private', auth, async (req, res) => {
 });
 
 // Cerca partita pubblica (matchmaking)
-router.post('/find-match', auth, async (req, res) => {
+// Alias per compatibilit
+router.post('/matchmaking', auth, async (req, res) => {
   try {
     const { stake, balanceType } = req.body;
     
