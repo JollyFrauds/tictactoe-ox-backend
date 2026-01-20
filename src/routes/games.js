@@ -10,7 +10,7 @@ function generateGameCode() {
 }
 
 // Crea partita privata
-router.post('/create-private', auth, async (req, res) => {
+router.post('/create', auth, async (req, res) => {
   try {
     const { stake, balanceType, balance_type } = req.body; const bType = balanceType || balance_type;
     
@@ -72,7 +72,7 @@ router.post('/create-private', auth, async (req, res) => {
 });
 
 // Unisciti a partita privata
-router.post('/join-private', auth, async (req, res) => {
+router.post('/join', auth, async (req, res) => {
   try {
     const { code } = req.body;
     
