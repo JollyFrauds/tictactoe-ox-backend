@@ -46,7 +46,7 @@ router.post('/create-private', auth, async (req, res) => {
       code: gameCode,
       player1: req.userId,
       stake: stake,
-      balance_type: balanceType,
+      balance_type: bType,
       status: 'waiting',
       board: Array(9).fill(null),
       current_turn: 'X'
@@ -157,7 +157,7 @@ router.post('/matchmaking', auth, async (req, res) => {
     // Cerca partita esistente con stesso stake
     let game = await Game.findOne({
       stake: stake,
-      balance_type: balanceType,
+      balance_type: bType,
       status: 'waiting',
       is_public: true,
       player1: { $ne: req.userId }
@@ -197,7 +197,7 @@ router.post('/matchmaking', auth, async (req, res) => {
       game = new Game({
         player1: req.userId,
         stake: stake,
-        balance_type: balanceType,
+        balance_type: bType,
         status: 'waiting',
         is_public: true,
         board: Array(9).fill(null),
