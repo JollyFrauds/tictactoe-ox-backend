@@ -90,3 +90,4 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🎮 Socket.IO ready for connections`);
   console.log(`💰 NOWPayments: ${process.env.NOWPAYMENTS_API_KEY ? 'Configured' : 'Not configured'}`);
 });
+// Force redeploy Tue Jan 20 23:04:13 UTC 2026
