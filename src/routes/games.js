@@ -12,7 +12,7 @@ function generateGameCode() {
 // Crea partita privata
 router.post('/create-private', auth, async (req, res) => {
   try {
-    const { stake, balanceType } = req.body;
+    const { stake, balanceType, balance_type } = req.body; const bType = balanceType || balance_type;
     
     // Verifica stake valido
     const validStakes = [5, 10, 15, 20, 25, 50];
@@ -21,14 +21,14 @@ router.post('/create-private', auth, async (req, res) => {
     }
     
     // Verifica balance type
-    if (!['fun', 'real'].includes(balanceType)) {
+    if (!['fun', 'real'].includes(bType)) {
       return res.status(400).json({ success: false, message: 'Tipo di bilancio non valido' });
     }
     
     const user = await User.findById(req.userId);
     
     // Verifica saldo sufficiente
-    const balance = balanceType === 'fun' ? user.fun_balance : user.real_balance;
+    const balance = bType === 'fun' ? user.fun_balance : user.real_balance;
     if (balance < stake) {
       return res.status(400).json({ success: false, message: 'Saldo insufficiente' });
     }
@@ -138,7 +138,7 @@ router.post('/join-private', auth, async (req, res) => {
 // Alias per compatibilit
 router.post('/matchmaking', auth, async (req, res) => {
   try {
-    const { stake, balanceType } = req.body;
+    const { stake, balanceType, balance_type } = req.body; const bType = balanceType || balance_type;
     
     // Verifica stake valido
     const validStakes = [5, 10, 15, 20, 25, 50];
@@ -149,7 +149,7 @@ router.post('/matchmaking', auth, async (req, res) => {
     const user = await User.findById(req.userId);
     
     // Verifica saldo sufficiente
-    const balance = balanceType === 'fun' ? user.fun_balance : user.real_balance;
+    const balance = bType === 'fun' ? user.fun_balance : user.real_balance;
     if (balance < stake) {
       return res.status(400).json({ success: false, message: 'Saldo insufficiente' });
     }
