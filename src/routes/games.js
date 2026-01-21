@@ -37,7 +37,7 @@ router.get("/public", auth, async (req, res) => {
 // Crea partita privata
 router.post('/create', auth, async (req, res) => {
   try {
-    const { stake, balanceType, balance_type } = req.body; const bType = (balanceType || balance_type || '').toLowerCase();
+    const { stake, balanceType, balance_type, is_public } = req.body; const bType = (balanceType || balance_type || '').toLowerCase();
     
     // Verifica stake valido
     const validStakes = [5, 10, 15, 20, 25, 50];
@@ -72,6 +72,7 @@ router.post('/create', auth, async (req, res) => {
       player1: req.userId,
       stake: parseInt(stake),
       balance_type: bType,
+      is_public: is_public === true,
       status: 'waiting',
       board: Array(9).fill(null),
       current_turn: 'X'
@@ -163,7 +164,7 @@ router.post('/join', auth, async (req, res) => {
 // Alias per compatibilit
 router.post('/matchmaking', auth, async (req, res) => {
   try {
-    const { stake, balanceType, balance_type } = req.body; const bType = (balanceType || balance_type || '').toLowerCase();
+    const { stake, balanceType, balance_type, is_public } = req.body; const bType = (balanceType || balance_type || '').toLowerCase();
     
     // Verifica stake valido
     const validStakes = [5, 10, 15, 20, 25, 50];
