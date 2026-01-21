@@ -2,97 +2,84 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Game = require('../models/Game');
-const Transaction = require('../models/Transaction');
+const Deposit = require('../models/Deposit');
+const Friendship = require('../models/Friendship');
 const walletService = require('../services/walletService');
 
 // Admin password (in production, use environment variable)
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'TicTacAdmin2026!';
 
-// Admin auth middleware
+// Middleware auth admin
 const adminAuth = (req, res, next) => {
-  const adminKey = req.headers['x-admin-key'];
-  if (adminKey !== ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized - Invalid admin key' });
+  const authHeader = req.headers['x-admin-password'];
+  if (!authHeader || authHeader !== ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false, error: 'Password admin non valida' });
   }
   next();
 };
 
-// Apply admin auth to all routes
-router.use(adminAuth);
-
 // ==================== DASHBOARD ====================
-
-// GET /api/admin/stats - Dashboard statistics
-router.get('/stats', async (req, res) => {
+router.get('/dashboard', adminAuth, async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
     const totalGames = await Game.countDocuments();
-    const activeGames = await Game.countDocuments({ status: 'playing' });
-    const waitingGames = await Game.countDocuments({ status: 'waiting' });
-    const finishedGames = await Game.countDocuments({ status: 'finished' });
+    const activeGames = await Game.countDocuments({ status: { $in: ['waiting', 'playing'] } });
+    const totalDeposits = await Deposit.countDocuments();
     
-    // Aggregate balances
-    const balanceStats = await User.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalFunBalance: { $sum: '$fun_balance' },
-          totalRealBalance: { $sum: '$real_balance' },
-          avgFunBalance: { $avg: '$fun_balance' },
-          avgRealBalance: { $avg: '$real_balance' }
-        }
-      }
+    // Calculate total balances
+    const balanceAgg = await User.aggregate([
+      { $group: { 
+        _id: null, 
+        totalFun: { $sum: '$fun_balance' },
+        totalReal: { $sum: '$real_balance' }
+      }}
     ]);
-
-    // Recent registrations (last 24h)
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recentUsers = await User.countDocuments({ createdAt: { $gte: oneDayAgo } });
-
+    
     // Hot wallet status
-    let walletStatus = { balance: 0, address: 'N/A' };
+    let walletStatus = { address: 'N/A', balanceSats: 0 };
     try {
-      const wallet = walletService.getWalletInfo();
-      walletStatus = {
-        address: wallet.address,
-        balance: wallet.balance || 0
-      };
-    } catch (e) {
-      console.log('Wallet service not available');
-    }
-
+      walletStatus = await walletService.getWalletStatus();
+    } catch (e) {}
+    
+    // Recent users (last 24h)
+    const oneDayAgo = new Date(Date.now() - 24*60*60*1000);
+    const newUsers24h = await User.countDocuments({ createdAt: { $gte: oneDayAgo } });
+    
+    // Games by status
+    const gamesByStatus = await Game.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+    
     res.json({
       success: true,
       stats: {
         users: {
           total: totalUsers,
-          recentSignups: recentUsers
+          new24h: newUsers24h
         },
         games: {
           total: totalGames,
           active: activeGames,
-          waiting: waitingGames,
-          finished: finishedGames
+          byStatus: gamesByStatus
         },
-        balances: balanceStats[0] || {
-          totalFunBalance: 0,
-          totalRealBalance: 0,
-          avgFunBalance: 0,
-          avgRealBalance: 0
+        balances: {
+          totalFun: balanceAgg[0]?.totalFun || 0,
+          totalReal: balanceAgg[0]?.totalReal || 0
         },
-        wallet: walletStatus
+        wallet: walletStatus,
+        deposits: totalDeposits
       }
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // ==================== USERS ====================
-
-// GET /api/admin/users - List all users
-router.get('/users', async (req, res) => {
+router.get('/users', adminAuth, async (req, res) => {
   try {
-    const { search, sort = '-createdAt', limit = 50, skip = 0 } = req.query;
+    const { page = 1, limit = 50, search = '' } = req.query;
+    const skip = (page - 1) * limit;
     
     let query = {};
     if (search) {
@@ -104,334 +91,258 @@ router.get('/users', async (req, res) => {
         ]
       };
     }
-
+    
     const users = await User.find(query)
       .select('-password')
-      .sort(sort)
-      .limit(parseInt(limit))
-      .skip(parseInt(skip));
-
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
     const total = await User.countDocuments(query);
-
+    
     res.json({
       success: true,
       users,
-      total,
-      limit: parseInt(limit),
-      skip: parseInt(skip)
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// GET /api/admin/users/:id - Get user details
-router.get('/users/:id', async (req, res) => {
+router.get('/users/:id', adminAuth, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
+    if (!user) return res.status(404).json({ success: false, error: 'Utente non trovato' });
+    
     // Get user's games
     const games = await Game.find({
       $or: [{ player1: user._id }, { player2: user._id }]
-    }).sort('-createdAt').limit(20);
-
-    // Get user's friends
-    const friends = await User.find({
-      _id: { $in: user.friends }
-    }).select('username odint_id');
-
-    res.json({
-      success: true,
-      user,
-      games,
-      friends
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    }).sort({ createdAt: -1 }).limit(20);
+    
+    // Get user's friendships
+    const friendships = await Friendship.find({
+      $or: [{ requester: user._id }, { recipient: user._id }],
+      status: 'accepted'
+    }).populate('requester recipient', 'username odint_id');
+    
+    res.json({ success: true, user, games, friendships });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// PUT /api/admin/users/:id - Update user
-router.put('/users/:id', async (req, res) => {
+router.put('/users/:id', adminAuth, async (req, res) => {
   try {
-    const { fun_balance, real_balance, is_banned, is_admin, username, email } = req.body;
-    
+    const { fun_balance, real_balance, is_banned } = req.body;
     const updateData = {};
-    if (fun_balance !== undefined) updateData.fun_balance = fun_balance;
-    if (real_balance !== undefined) updateData.real_balance = real_balance;
+    
+    if (fun_balance !== undefined) updateData.fun_balance = parseFloat(fun_balance);
+    if (real_balance !== undefined) updateData.real_balance = parseFloat(real_balance);
     if (is_banned !== undefined) updateData.is_banned = is_banned;
-    if (is_admin !== undefined) updateData.is_admin = is_admin;
-    if (username) updateData.username = username;
-    if (email) updateData.email = email;
-
+    
     const user = await User.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true }
     ).select('-password');
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json({ success: true, user });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    
+    if (!user) return res.status(404).json({ success: false, error: 'Utente non trovato' });
+    
+    res.json({ success: true, user, message: 'Utente aggiornato' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// POST /api/admin/users/:id/add-balance - Add balance to user
-router.post('/users/:id/add-balance', async (req, res) => {
-  try {
-    const { type, amount, reason } = req.body;
-    
-    if (!type || !amount) {
-      return res.status(400).json({ error: 'Type and amount required' });
-    }
-
-    const field = type === 'fun' ? 'fun_balance' : 'real_balance';
-    
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { [field]: amount } },
-      { new: true }
-    ).select('-password');
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Log the action
-    console.log(`[ADMIN] Added ${amount} ${type} to user ${user.username} (${user.odint_id}). Reason: ${reason || 'N/A'}`);
-
-    res.json({ 
-      success: true, 
-      user,
-      message: `Added ${amount} ${type.toUpperCase()} to ${user.username}`
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// DELETE /api/admin/users/:id - Delete user
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', adminAuth, async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Also delete user's games
-    await Game.deleteMany({
-      $or: [{ player1: req.params.id }, { player2: req.params.id }]
-    });
-
-    res.json({ success: true, message: `User ${user.username} deleted` });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (!user) return res.status(404).json({ success: false, error: 'Utente non trovato' });
+    
+    // Also delete related data
+    await Game.deleteMany({ $or: [{ player1: req.params.id }, { player2: req.params.id }] });
+    await Friendship.deleteMany({ $or: [{ requester: req.params.id }, { recipient: req.params.id }] });
+    
+    res.json({ success: true, message: 'Utente eliminato' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // ==================== GAMES ====================
-
-// GET /api/admin/games - List all games
-router.get('/games', async (req, res) => {
+router.get('/games', adminAuth, async (req, res) => {
   try {
-    const { status, limit = 50, skip = 0 } = req.query;
+    const { page = 1, limit = 50, status = '' } = req.query;
+    const skip = (page - 1) * limit;
     
     let query = {};
     if (status) query.status = status;
-
+    
     const games = await Game.find(query)
-      .populate('player1', 'username odint_id')
-      .populate('player2', 'username odint_id')
-      .populate('winner', 'username odint_id')
-      .sort('-createdAt')
-      .limit(parseInt(limit))
-      .skip(parseInt(skip));
-
+      .populate('player1 player2 winner', 'username odint_id')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
     const total = await Game.countDocuments(query);
-
+    
     res.json({
       success: true,
       games,
-      total
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// GET /api/admin/games/:id - Get game details
-router.get('/games/:id', async (req, res) => {
-  try {
-    const game = await Game.findById(req.params.id)
-      .populate('player1', 'username odint_id fun_balance real_balance')
-      .populate('player2', 'username odint_id fun_balance real_balance')
-      .populate('winner', 'username odint_id');
-
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-
-    res.json({ success: true, game });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// PUT /api/admin/games/:id - Update game (force end, change status)
-router.put('/games/:id', async (req, res) => {
-  try {
-    const { status, winner } = req.body;
-    
-    const updateData = {};
-    if (status) updateData.status = status;
-    if (winner) updateData.winner = winner;
-
-    const game = await Game.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    ).populate('player1 player2 winner', 'username odint_id');
-
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-
-    res.json({ success: true, game });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// DELETE /api/admin/games/:id - Delete game
-router.delete('/games/:id', async (req, res) => {
+router.delete('/games/:id', adminAuth, async (req, res) => {
   try {
     const game = await Game.findByIdAndDelete(req.params.id);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
+    if (!game) return res.status(404).json({ success: false, error: 'Partita non trovata' });
+    res.json({ success: true, message: 'Partita eliminata' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
-    res.json({ success: true, message: 'Game deleted' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+// Force end a game
+router.post('/games/:id/end', adminAuth, async (req, res) => {
+  try {
+    const { winner_id } = req.body;
+    const game = await Game.findById(req.params.id);
+    if (!game) return res.status(404).json({ success: false, error: 'Partita non trovata' });
+    
+    game.status = 'finished';
+    if (winner_id) game.winner = winner_id;
+    await game.save();
+    
+    res.json({ success: true, message: 'Partita terminata', game });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==================== DEPOSITS ====================
+router.get('/deposits', adminAuth, async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (page - 1) * limit;
+    
+    const deposits = await Deposit.find()
+      .populate('user', 'username odint_id email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Deposit.countDocuments();
+    
+    res.json({
+      success: true,
+      deposits,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // ==================== WALLET ====================
-
-// GET /api/admin/wallet - Hot wallet status
-router.get('/wallet', async (req, res) => {
+router.get('/wallet/status', adminAuth, async (req, res) => {
   try {
-    const wallet = walletService.getWalletInfo();
-    const balance = await walletService.checkBalance();
-    
-    res.json({
-      success: true,
-      wallet: {
-        address: wallet.address,
-        balance: balance,
-        balanceBTC: (balance / 100000000).toFixed(8)
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET /api/admin/transactions - List transactions
-router.get('/transactions', async (req, res) => {
-  try {
-    const { type, status, limit = 50 } = req.query;
-    
-    let query = {};
-    if (type) query.type = type;
-    if (status) query.status = status;
-
-    // If Transaction model exists
-    let transactions = [];
-    try {
-      transactions = await Transaction.find(query)
-        .populate('user', 'username odint_id')
-        .sort('-createdAt')
-        .limit(parseInt(limit));
-    } catch (e) {
-      // Transaction model might not exist
-      transactions = [];
-    }
-
-    res.json({ success: true, transactions });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/admin/wallet/send - Manual BTC send (emergency)
-router.post('/wallet/send', async (req, res) => {
-  try {
-    const { toAddress, amountSats } = req.body;
-    
-    if (!toAddress || !amountSats) {
-      return res.status(400).json({ error: 'toAddress and amountSats required' });
-    }
-
-    const result = await walletService.sendBitcoin(toAddress, amountSats);
-    
-    res.json({
-      success: true,
-      txHash: result.txHash,
-      message: `Sent ${amountSats} sats to ${toAddress}`
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    const status = await walletService.getWalletStatus();
+    res.json({ success: true, ...status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // ==================== SETTINGS ====================
-
-// GET /api/admin/settings - Get app settings
-router.get('/settings', async (req, res) => {
+router.get('/settings', adminAuth, async (req, res) => {
   try {
-    // These could be stored in a Settings collection
-    const settings = {
-      checkin_bonus: parseInt(process.env.CHECKIN_BONUS) || 50,
-      initial_fun_balance: parseInt(process.env.INITIAL_FUN_BALANCE) || 100,
-      stakes: [5, 10, 15, 20, 25, 50],
-      min_withdrawal: parseFloat(process.env.MIN_WITHDRAWAL) || 5,
-      btc_rate: parseFloat(process.env.BTC_RATE) || 95000 // EUR per BTC
-    };
-
-    res.json({ success: true, settings });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    // Return current settings (from env or defaults)
+    res.json({
+      success: true,
+      settings: {
+        checkin_bonus: process.env.CHECKIN_BONUS || 50,
+        min_withdrawal: process.env.MIN_WITHDRAWAL || 10,
+        btc_rate_eur: process.env.BTC_RATE_EUR || 40000,
+        stakes: [5, 10, 15, 20, 25, 50]
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // ==================== BROADCAST ====================
-
-// POST /api/admin/broadcast - Send notification to all users (placeholder)
-router.post('/broadcast', async (req, res) => {
+router.post('/broadcast', adminAuth, async (req, res) => {
   try {
-    const { message, title } = req.body;
+    const { message, type = 'info' } = req.body;
+    // In a real app, this would send push notifications or store in a messages collection
+    // For now, just acknowledge
+    res.json({ 
+      success: true, 
+      message: 'Messaggio broadcast ricevuto',
+      broadcast: { message, type, timestamp: new Date() }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==================== STATS ====================
+router.get('/stats/daily', adminAuth, async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
     
-    // In a real app, this would send push notifications
-    // For now, just log it
-    console.log(`[BROADCAST] ${title}: ${message}`);
+    // Users per day
+    const usersByDay = await User.aggregate([
+      { $match: { createdAt: { $gte: startDate } } },
+      { $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        count: { $sum: 1 }
+      }},
+      { $sort: { _id: 1 } }
+    ]);
     
-    const userCount = await User.countDocuments();
+    // Games per day
+    const gamesByDay = await Game.aggregate([
+      { $match: { createdAt: { $gte: startDate } } },
+      { $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        count: { $sum: 1 }
+      }},
+      { $sort: { _id: 1 } }
+    ]);
     
     res.json({
       success: true,
-      message: `Broadcast queued for ${userCount} users`,
-      content: { title, message }
+      stats: {
+        usersByDay,
+        gamesByDay
+      }
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
