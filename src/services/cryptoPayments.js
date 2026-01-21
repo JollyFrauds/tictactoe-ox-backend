@@ -17,8 +17,8 @@ const NOWPAYMENTS_API = 'https://api.nowpayments.io/v1';
 
 class CryptoPaymentsService {
   constructor() {
-    this.apiKey = process.env.NOWPAYMENTS_API_KEY;
-    this.ipnSecret = process.env.NOWPAYMENTS_IPN_SECRET;
+    this.apiKey = process.env.NOWPAYMENTS_API_KEY || 'K2A80BV-RMYMX1N-M6PD5Q9-6AVNCVD';
+    this.ipnSecret = process.env.NOWPAYMENTS_IPN_SECRET || 'gJu47pI3DTY6qLFE7p/HWld+QKscZPsr';
   }
 
   // Verifica che il servizio sia configurato
