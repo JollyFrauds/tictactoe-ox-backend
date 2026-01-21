@@ -26,7 +26,12 @@ router.get("/hot-wallet-status", async (req, res) => {
     // Get BTC price from CoinGecko
     let btcPrice = null;
     try {
-      const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur');
+      const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur', {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'TicTacToeOX/1.0'
+      }
+    });
       const priceData = await priceResponse.json();
       btcPrice = priceData.bitcoin?.eur || null;
     } catch (priceError) {
