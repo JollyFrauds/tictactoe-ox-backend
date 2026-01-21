@@ -9,6 +9,31 @@ function generateGameCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+
+// List public games waiting for opponent
+router.get("/public", auth, async (req, res) => {
+  try {
+    const games = await Game.find({
+      is_public: true,
+      status: "waiting",
+      player1: { $ne: req.userId }
+    }).populate("player1", "odint_username odint_id");
+    res.json({
+      success: true,
+      games: games.map(g => ({
+        id: g._id,
+        stake: g.stake,
+        balance_type: g.balance_type,
+        creator: g.player1?.odint_username || "Unknown",
+        creator_id: g.player1?.odint_id
+      }))
+    });
+  } catch (error) {
+    console.error("List public games error:", error);
+    res.status(500).json({ success: false, message: "Errore server" });
+  }
+});
+
 // Crea partita privata
 router.post('/create', auth, async (req, res) => {
   try {
