@@ -395,23 +395,30 @@ function viewGame(gameId) {
 // Load Wallet
 async function loadWallet() {
     try {
-        const res = await fetch(API_URL + '/api/admin/wallet', {
-            headers: { 'x-admin-password': ADMIN_PASSWORD }
-        });
-        const data = await res.json();
+        // Hot wallet status
+        const walletRes = await fetch(API_URL + '/api/btc/hot-wallet-status');
+        const walletData = await walletRes.json();
         
-        document.getElementById('hotWalletAddress').textContent = data.address;
-        document.getElementById('hotWalletBalance').textContent = data.balanceSats.toLocaleString() + ' sats';
-        document.getElementById('btcPrice').textContent = '$' + (data.btcPrice || 0).toLocaleString();
+        if (walletData.success) {
+            document.getElementById('hotWalletAddress').textContent = walletData.masterAddress || '-';
+            document.getElementById('hotWalletBalance').textContent = (walletData.balanceSatoshis || 0).toLocaleString() + ' sats';
+            document.getElementById('btcPrice').textContent = walletData.btcPriceUSD ? '$' + walletData.btcPriceUSD.toLocaleString() : '-';
+        }
         
         // Deposits
+        const depositsRes = await fetch(API_URL + '/api/admin/deposits', {
+            headers: { 'x-admin-password': ADMIN_PASSWORD }
+        });
+        const depositsData = await depositsRes.json();
+        
         var depositsHtml = '';
-        if (data.deposits && data.deposits.length > 0) {
-            data.deposits.forEach(function(d) {
+        var deposits = depositsData.deposits || depositsData || [];
+        if (deposits.length > 0) {
+            deposits.forEach(function(d) {
                 depositsHtml += '<tr>';
-                depositsHtml += '<td>' + (d.user && d.user.username ? d.user.username : '-') + '</td>';
-                depositsHtml += '<td>' + d.amount + ' sats</td>';
-                depositsHtml += '<td><span class="status ' + d.status + '">' + d.status + '</span></td>';
+                depositsHtml += '<td>' + (d.user && d.user.username ? d.user.username : (d.userId || '-')) + '</td>';
+                depositsHtml += '<td>' + (d.amount || d.amountSats || 0) + ' sats</td>';
+                depositsHtml += '<td><span class="status ' + (d.status || 'pending') + '">' + (d.status || 'pending') + '</span></td>';
                 depositsHtml += '<td>' + new Date(d.createdAt).toLocaleString() + '</td>';
                 depositsHtml += '</tr>';
             });
