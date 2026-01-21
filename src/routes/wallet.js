@@ -342,6 +342,22 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
       status: 'pending',
       created_at: new Date(),
     };
+    // Send email notification to admin
+    try {
+      await emailService.sendWithdrawalNotification({
+        username: user.username,
+        odint_id: user.odint_id,
+        amount: amount,
+        net_amount: netAmount,
+        fee: fee,
+        currency: currency,
+        wallet_address: wallet_address,
+        withdrawal_id: withdrawal.id
+      });
+      console.log("Withdrawal notification email sent");
+    } catch (emailError) {
+      console.error("Email notification failed:", emailError);
+    }
 
     res.json({
       success: true,
