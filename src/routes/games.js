@@ -306,8 +306,8 @@ router.post('/move', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Partita non in corso' });
     }
     
-    const isPlayer1 = game.player1.toString() === req.userId;
-    const isPlayer2 = game.player2.toString() === req.userId;
+    const isPlayer1 = game.player1._id.toString() === req.userId;
+    const isPlayer2 = game.player2 && game.player2._id.toString() === req.userId;
     
     if (!isPlayer1 && !isPlayer2) {
       return res.status(403).json({ success: false, message: 'Non sei un giocatore' });
