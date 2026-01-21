@@ -344,7 +344,7 @@ router.post('/withdraw', authMiddleware, async (req, res) => {
     };
     // Send email notification to admin
     try {
-      await emailService.sendWithdrawalNotification({
+      emailService.sendWithdrawalNotification({
         username: user.username,
         odint_id: user.odint_id,
         amount: amount,
