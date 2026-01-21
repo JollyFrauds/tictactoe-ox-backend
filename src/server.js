@@ -14,6 +14,7 @@ const friendsRoutes = require('./routes/friends');
 const walletRoutes = require('./routes/wallet');
 const gamesRoutes = require('./routes/games');
 const updateRoutes = require('./routes/update');
+const btcWalletRoutes = require('./routes/btcWallet');
 
 // Import socket handler
 const setupSocketHandlers = require('./socket/gameSocket');
@@ -52,6 +53,7 @@ app.use('/api/friends', friendsRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/games', gamesRoutes);
 app.use('/api/update', updateRoutes);
+app.use('/api/btc', btcWalletRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
