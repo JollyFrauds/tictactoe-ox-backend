@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const walletService = require('../services/walletService');
-const auth = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const DepositCounter = require('../models/DepositCounter');
@@ -23,7 +23,7 @@ router.get('/hot-wallet-info', async (req, res) => {
 });
 
 // Get UNIQUE deposit address for user
-router.get('/deposit-address', auth, async (req, res) => {
+router.get('/deposit-address', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -62,7 +62,7 @@ router.get('/deposit-address', auth, async (req, res) => {
 });
 
 // Request withdrawal
-router.post('/withdraw', auth, async (req, res) => {
+router.post('/withdraw', authMiddleware, async (req, res) => {
   try {
     const { amount, address } = req.body;
     
@@ -193,7 +193,7 @@ router.post('/check-deposits', async (req, res) => {
 });
 
 // Transaction history for user
-router.get('/transactions', auth, async (req, res) => {
+router.get('/transactions', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
