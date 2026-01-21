@@ -67,7 +67,7 @@ router.post('/create', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Create private game error:', error);
-    res.status(500).json({ success: false, message: 'Errore del server' });
+    res.status(500).json({ success: false, message: 'Errore: ' + error.message });
   }
 });
 
@@ -130,7 +130,7 @@ router.post('/join', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Join private game error:', error);
-    res.status(500).json({ success: false, message: 'Errore del server' });
+    res.status(500).json({ success: false, message: 'Errore: ' + error.message });
   }
 });
 
@@ -219,7 +219,7 @@ router.post('/matchmaking', auth, async (req, res) => {
     }
   } catch (error) {
     console.error('Find match error:', error);
-    res.status(500).json({ success: false, message: 'Errore del server' });
+    res.status(500).json({ success: false, message: 'Errore: ' + error.message });
   }
 });
 
@@ -256,7 +256,7 @@ router.get('/status/:gameId', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Game status error:', error);
-    res.status(500).json({ success: false, message: 'Errore del server' });
+    res.status(500).json({ success: false, message: 'Errore: ' + error.message });
   }
 });
 
@@ -364,7 +364,7 @@ router.post('/move', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Move error:', error);
-    res.status(500).json({ success: false, message: 'Errore del server' });
+    res.status(500).json({ success: false, message: 'Errore: ' + error.message });
   }
 });
 
@@ -392,7 +392,7 @@ router.post('/cancel-search', auth, async (req, res) => {
     res.json({ success: true, message: 'Ricerca annullata' });
   } catch (error) {
     console.error('Cancel search error:', error);
-    res.status(500).json({ success: false, message: 'Errore del server' });
+    res.status(500).json({ success: false, message: 'Errore: ' + error.message });
   }
 });
 
