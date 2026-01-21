@@ -12,7 +12,7 @@ function generateGameCode() {
 // Crea partita privata
 router.post('/create', auth, async (req, res) => {
   try {
-    const { stake, balanceType, balance_type } = req.body; const bType = balanceType || balance_type;
+    const { stake, balanceType, balance_type } = req.body; const bType = (balanceType || balance_type || '').toLowerCase();
     
     // Verifica stake valido
     const validStakes = [5, 10, 15, 20, 25, 50];
@@ -138,7 +138,7 @@ router.post('/join', auth, async (req, res) => {
 // Alias per compatibilit
 router.post('/matchmaking', auth, async (req, res) => {
   try {
-    const { stake, balanceType, balance_type } = req.body; const bType = balanceType || balance_type;
+    const { stake, balanceType, balance_type } = req.body; const bType = (balanceType || balance_type || '').toLowerCase();
     
     // Verifica stake valido
     const validStakes = [5, 10, 15, 20, 25, 50];
