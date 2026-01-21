@@ -13,6 +13,7 @@ const userRoutes = require('./routes/user');
 const friendsRoutes = require('./routes/friends');
 const walletRoutes = require('./routes/wallet');
 const gamesRoutes = require('./routes/games');
+const updateRoutes = require('./routes/update');
 
 // Import socket handler
 const setupSocketHandlers = require('./socket/gameSocket');
@@ -50,6 +51,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/friends', friendsRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/games', gamesRoutes);
+app.use('/api/update', updateRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
