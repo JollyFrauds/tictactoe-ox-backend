@@ -170,11 +170,6 @@ router.get('/list', authMiddleware, async (req, res) => {
     const friends = await User.find({
       odint_id: { $in: req.user.friends },
     });
-    
-    // Get pending friend requests
-    const pendingRequests = await User.find({
-      odint_id: { $in: req.user.friend_requests },
-    });
 
     res.json({
       success: true,
@@ -183,10 +178,6 @@ router.get('/list', authMiddleware, async (req, res) => {
         odint_username: f.odint_username,
         games_played: f.games_played,
         games_won: f.games_won,
-      })),
-      pendingRequests: pendingRequests.map(u => ({
-        odint_id: u.odint_id,
-        odint_username: u.odint_username,
       })),
     });
   } catch (error) {
