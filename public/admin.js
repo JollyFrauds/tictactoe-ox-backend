@@ -156,7 +156,7 @@ function renderUsers(users) {
     users.forEach(function(u) {
         html += '<tr>';
         html += '<td><span class="user-id">' + u.odint_id + '</span></td>';
-        html += '<td>' + u.username + '</td>';
+        html += '<td>' + (u.odint_username || '-') + '</td>';
         html += '<td>' + (u.email || '-') + '</td>';
         html += '<td><span class="balance fun">' + u.fun_balance + '</span></td>';
         html += '<td><span class="balance real">€' + u.real_balance + '</span></td>';
@@ -185,7 +185,7 @@ function renderUsers(users) {
 function searchUsers() {
     const query = document.getElementById('userSearch').value.toLowerCase();
     const filtered = allUsers.filter(function(u) {
-        return u.username.toLowerCase().includes(query) || 
+        return (u.odint_username && u.odint_username.toLowerCase().includes(query)) || 
                u.odint_id.toLowerCase().includes(query) ||
                (u.email && u.email.toLowerCase().includes(query));
     });
@@ -198,7 +198,7 @@ function editUser(userId) {
     if (!user) return;
     
     document.getElementById('editUserId').value = userId;
-    document.getElementById('editUsername').value = user.username;
+    document.getElementById('editUsername').value = user.odint_username || '';
     document.getElementById('editEmail').value = user.email || '';
     document.getElementById('editFunBalance').value = user.fun_balance;
     document.getElementById('editRealBalance').value = user.real_balance;
@@ -213,7 +213,7 @@ function closeModal() {
 async function saveUser() {
     const userId = document.getElementById('editUserId').value;
     const data = {
-        username: document.getElementById('editUsername').value,
+        odint_username: document.getElementById('editUsername').value,
         email: document.getElementById('editEmail').value,
         fun_balance: parseFloat(document.getElementById('editFunBalance').value),
         real_balance: parseFloat(document.getElementById('editRealBalance').value)
@@ -325,8 +325,8 @@ function renderGames(games) {
         var statusClass = g.status === 'playing' ? 'playing' : g.status === 'finished' ? 'finished' : 'waiting';
         html += '<tr>';
         html += '<td><span class="game-id">' + g._id.slice(-8) + '</span></td>';
-        html += '<td>' + (g.player1 && g.player1.username ? g.player1.username : '-') + '</td>';
-        html += '<td>' + (g.player2 && g.player2.username ? g.player2.username : '-') + '</td>';
+        html += '<td>' + (g.player1 && g.player1.odint_username ? g.player1.odint_username : '-') + '</td>';
+        html += '<td>' + (g.player2 && g.player2.odint_username ? g.player2.odint_username : '-') + '</td>';
         html += '<td><span class="status ' + statusClass + '">' + g.status + '</span></td>';
         html += '<td>€' + g.stake + '</td>';
         html += '<td>' + (g.is_public ? '🌍 Public' : '🔒 Private') + '</td>';
@@ -386,8 +386,8 @@ function viewGame(gameId) {
         board += cell + (i % 3 === 2 ? '\n' : ' | ');
     }
     
-    var p1 = game.player1 && game.player1.username ? game.player1.username : '-';
-    var p2 = game.player2 && game.player2.username ? game.player2.username : '-';
+    var p1 = game.player1 && game.player1.odint_username ? game.player1.odint_username : '-';
+    var p2 = game.player2 && game.player2.odint_username ? game.player2.odint_username : '-';
     
     alert('Partita: ' + gameId + '\n\nBoard:\n' + board + '\n\nPlayer 1 (X): ' + p1 + '\nPlayer 2 (O): ' + p2 + '\nStatus: ' + game.status + '\nWinner: ' + (game.winner || '-'));
 }
@@ -400,8 +400,8 @@ async function loadWallet() {
         const walletData = await walletRes.json();
         
         if (walletData.success) {
-            document.getElementById('hotWalletAddress').textContent = walletData.masterAddress || '-';
-            document.getElementById('hotWalletBalance').textContent = (walletData.balanceSatoshis || 0).toLocaleString() + ' sats';
+            document.getElementById('hotWalletAddress').textContent = walletData.address || '-';
+            document.getElementById('hotWalletBalance').textContent = (walletData.balanceSats || 0).toLocaleString() + ' sats';
             document.getElementById('btcPrice').textContent = walletData.btcPriceUSD ? '$' + walletData.btcPriceUSD.toLocaleString() : '-';
         }
         
@@ -416,7 +416,7 @@ async function loadWallet() {
         if (deposits.length > 0) {
             deposits.forEach(function(d) {
                 depositsHtml += '<tr>';
-                depositsHtml += '<td>' + (d.user && d.user.username ? d.user.username : (d.userId || '-')) + '</td>';
+                depositsHtml += '<td>' + (d.user && d.user.odint_username ? d.user.odint_username : (d.userId || '-')) + '</td>';
                 depositsHtml += '<td>' + (d.amount || d.amountSats || 0) + ' sats</td>';
                 depositsHtml += '<td><span class="status ' + (d.status || 'pending') + '">' + (d.status || 'pending') + '</span></td>';
                 depositsHtml += '<td>' + new Date(d.createdAt).toLocaleString() + '</td>';

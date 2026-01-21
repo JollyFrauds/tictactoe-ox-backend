@@ -129,7 +129,7 @@ router.get('/users/:id', adminAuth, async (req, res) => {
     const friendships = await Friendship.find({
       $or: [{ requester: user._id }, { recipient: user._id }],
       status: 'accepted'
-    }).populate('requester recipient', 'username odint_id');
+    }).populate('requester recipient', 'odint_username odint_id');
     
     res.json({ success: true, user, games, friendships });
   } catch (err) {
@@ -185,7 +185,7 @@ router.get('/games', adminAuth, async (req, res) => {
     if (status) query.status = status;
     
     const games = await Game.find(query)
-      .populate('player1 player2 winner', 'username odint_id')
+      .populate('player1 player2 winner', 'odint_username odint_id')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -241,7 +241,7 @@ router.get('/deposits', adminAuth, async (req, res) => {
     const skip = (page - 1) * limit;
     
     const deposits = await Deposit.find()
-      .populate('user', 'username odint_id email')
+      .populate('user', 'odint_username odint_id email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
