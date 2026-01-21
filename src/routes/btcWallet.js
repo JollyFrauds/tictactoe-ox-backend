@@ -33,7 +33,7 @@ router.get("/hot-wallet-status", async (req, res) => {
       }
     });
       const priceData = await priceResponse.json();
-      btcPrice = priceData.bitcoin?.eur || null;
+      btcPrice = priceData.bitcoin?.eur || 75000;
     } catch (priceError) {
       console.error('Failed to fetch BTC price:', priceError.message);
     }
