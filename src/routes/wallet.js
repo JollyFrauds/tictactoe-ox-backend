@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth');
 const cryptoPayments = require('../services/cryptoPayments');
+const emailService = require('../services/emailService');
 const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
@@ -416,6 +417,128 @@ router.post('/admin/confirm-deposit', async (req, res) => {
 // Admin credit endpoint
 router.post("/admin/credit", authMiddleware, async (req, res) => { try { const { amount, balance_type } = req.body; const user = await User.findById(req.user.userId); if (!user) return res.status(404).json({ error: "User not found" }); if (balance_type === "real") { user.real_balance = (user.real_balance || 0) + parseFloat(amount); } else { user.fun_balance = (user.fun_balance || 0) + parseFloat(amount); } await user.save(); res.json({ success: true, real_balance: user.real_balance, fun_balance: user.fun_balance }); } catch (error) { res.status(500).json({ error: error.message }); } });
 
+
+
+
+
+// ============================================
+// ADMIN ENDPOINTS FOR WITHDRAWAL MANAGEMENT
+// ============================================
+
+// List all pending withdrawals (admin only)
+router.get('/admin/pending-withdrawals', async (req, res) => {
+  try {
+    // In production, add admin authentication
+    const User = require('../models/User');
+    const users = await User.find({ 'pending_withdrawals.0': { $exists: true } });
+    
+    const allWithdrawals = [];
+    for (const user of users) {
+      for (const w of user.pending_withdrawals || []) {
+        allWithdrawals.push({
+          ...w,
+          username: user.username,
+          user_odint_id: user.odint_id
+        });
+      }
+    }
+    
+    // Sort by date (newest first)
+    allWithdrawals.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    res.json({
+      success: true,
+      total: allWithdrawals.length,
+      pending: allWithdrawals.filter(w => w.status === 'pending').length,
+      withdrawals: allWithdrawals
+    });
+  } catch (error) {
+    console.error('Error listing withdrawals:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Mark withdrawal as processed (admin only)
+router.post('/admin/process-withdrawal', async (req, res) => {
+  try {
+    const { withdrawal_id, tx_hash, status } = req.body;
+    
+    if (!withdrawal_id) {
+      return res.status(400).json({ success: false, error: 'withdrawal_id required' });
+    }
+    
+    const User = require('../models/User');
+    const user = await User.findOne({ 'pending_withdrawals.id': withdrawal_id });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Withdrawal not found' });
+    }
+    
+    // Find and update the withdrawal
+    const withdrawal = user.pending_withdrawals.find(w => w.id === withdrawal_id);
+    if (withdrawal) {
+      withdrawal.status = status || 'completed';
+      withdrawal.tx_hash = tx_hash || null;
+      withdrawal.processed_at = new Date().toISOString();
+      await user.save();
+    }
+    
+    res.json({
+      success: true,
+      message: `Withdrawal ${withdrawal_id} marked as ${status || 'completed'}`,
+      withdrawal: withdrawal
+    });
+  } catch (error) {
+    console.error('Error processing withdrawal:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Cancel withdrawal and refund (admin only)
+router.post('/admin/cancel-withdrawal', async (req, res) => {
+  try {
+    const { withdrawal_id, reason } = req.body;
+    
+    if (!withdrawal_id) {
+      return res.status(400).json({ success: false, error: 'withdrawal_id required' });
+    }
+    
+    const User = require('../models/User');
+    const user = await User.findOne({ 'pending_withdrawals.id': withdrawal_id });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Withdrawal not found' });
+    }
+    
+    // Find the withdrawal
+    const withdrawalIndex = user.pending_withdrawals.findIndex(w => w.id === withdrawal_id);
+    if (withdrawalIndex === -1) {
+      return res.status(404).json({ success: false, error: 'Withdrawal not found' });
+    }
+    
+    const withdrawal = user.pending_withdrawals[withdrawalIndex];
+    
+    // Refund the amount
+    user.real_balance += withdrawal.amount;
+    
+    // Mark as cancelled
+    withdrawal.status = 'cancelled';
+    withdrawal.cancelled_at = new Date().toISOString();
+    withdrawal.cancel_reason = reason || 'Admin cancelled';
+    
+    await user.save();
+    
+    res.json({
+      success: true,
+      message: `Withdrawal cancelled and €${withdrawal.amount} refunded`,
+      new_balance: user.real_balance,
+      withdrawal: withdrawal
+    });
+  } catch (error) {
+    console.error('Error cancelling withdrawal:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 
 module.exports = router;
