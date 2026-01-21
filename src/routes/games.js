@@ -125,7 +125,7 @@ router.post('/join', auth, async (req, res) => {
     }
     
     // Aggiorna la partita
-    game.player2 = req.userId;
+    game.player2 = req.userId.toString();
     game.status = 'playing';
     await game.save();
     
@@ -191,7 +191,7 @@ router.post('/matchmaking', auth, async (req, res) => {
     
     if (game) {
       // Trovato avversario - unisciti
-      game.player2 = req.userId;
+      game.player2 = req.userId.toString();
       game.status = 'playing';
       await game.save();
       
@@ -261,8 +261,8 @@ router.get('/status/:gameId', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Partita non trovata' });
     }
     
-    const isPlayer1 = game.player1._id.toString() === req.userId;
-    const isPlayer2 = game.player2 && game.player2._id.toString() === req.userId;
+    const isPlayer1 = game.player1._id.toString() === req.userId.toString();
+    const isPlayer2 = game.player2 && game.player2._id.toString() === req.userId.toString();
     
     if (!isPlayer1 && !isPlayer2) {
       return res.status(403).json({ success: false, message: 'Non sei un giocatore di questa partita' });
@@ -306,8 +306,8 @@ router.post('/move', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Partita non in corso' });
     }
     
-    const isPlayer1 = game.player1._id.toString() === req.userId;
-    const isPlayer2 = game.player2 && game.player2._id.toString() === req.userId;
+    const isPlayer1 = game.player1._id.toString() === req.userId.toString();
+    const isPlayer2 = game.player2 && game.player2._id.toString() === req.userId.toString();
     
     if (!isPlayer1 && !isPlayer2) {
       return res.status(403).json({ success: false, message: 'Non sei un giocatore' });
