@@ -158,7 +158,7 @@ router.post('/deposit', authMiddleware, async (req, res) => {
     
     // Production: use NOWPayments
     const orderId = `${user.odint_id}_${Date.now()}`;
-    const callbackUrl = `${process.env.BASE_URL || 'https://yourserver.com'}/api/wallet/webhook/nowpayments`;
+    const callbackUrl = `${process.env.BASE_URL || 'https://tictactoe-ox-backend-production.up.railway.app'}/api/wallet/webhook/nowpayments`;
     
     const payment = await cryptoPayments.createPayment(
       amount,
