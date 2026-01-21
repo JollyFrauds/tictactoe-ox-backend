@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const transactionSchema = new mongoose.Schema({
-  user_id: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -11,26 +11,26 @@ const transactionSchema = new mongoose.Schema({
     enum: ['deposit', 'withdrawal'],
     required: true
   },
-  amount_eur: {
-    type: Number,
-    required: true
-  },
-  amount_btc: {
-    type: Number,
-    default: 0
-  },
-  wallet_address: {
-    type: String,
-    required: true
-  },
-  tx_hash: {
-    type: String,
-    default: null
-  },
   status: {
     type: String,
     enum: ['awaiting', 'pending', 'confirmed', 'failed'],
     default: 'awaiting'
+  },
+  amount_btc: {
+    type: Number,
+    required: true
+  },
+  amount_eur: {
+    type: Number,
+    required: true
+  },
+  txid: {
+    type: String,
+    default: ''
+  },
+  address: {
+    type: String,
+    required: true
   },
   confirmations: {
     type: Number,
@@ -44,6 +44,12 @@ const transactionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+});
+
+// Update timestamp on save
+transactionSchema.pre('save', function(next) {
+  this.updated_at = Date.now();
+  next();
 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
