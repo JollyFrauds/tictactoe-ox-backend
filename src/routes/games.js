@@ -45,7 +45,7 @@ router.post('/create', auth, async (req, res) => {
     const game = new Game({
       code: gameCode,
       player1: req.userId,
-      stake: stake,
+      stake: parseInt(stake),
       balance_type: bType,
       status: 'waiting',
       board: Array(9).fill(null),
@@ -60,7 +60,7 @@ router.post('/create', auth, async (req, res) => {
       game: {
         id: game._id,
         code: gameCode,
-        stake: stake,
+        stake: parseInt(stake),
         balance_type: bType,
         status: 'waiting'
       }
@@ -156,7 +156,7 @@ router.post('/matchmaking', auth, async (req, res) => {
     
     // Cerca partita esistente con stesso stake
     let game = await Game.findOne({
-      stake: stake,
+      stake: parseInt(stake),
       balance_type: bType,
       status: 'waiting',
       is_public: true,
@@ -196,7 +196,7 @@ router.post('/matchmaking', auth, async (req, res) => {
       // Nessun avversario - crea partita pubblica
       game = new Game({
         player1: req.userId,
-        stake: stake,
+        stake: parseInt(stake),
         balance_type: bType,
         status: 'waiting',
         is_public: true,
