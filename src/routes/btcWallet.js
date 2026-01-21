@@ -26,16 +26,26 @@ router.get('/hot-wallet-info', async (req, res) => {
 // Get UNIQUE deposit address for user
 router.get('/deposit-address', authMiddleware, async (req, res) => {
   try {
+    // Get EUR amount from query parameter (default 10€)
+    const eurAmount = parseFloat(req.query.amount) || 10;
+    
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
+    
+    // Get current BTC price
+    const btcPrice = await getBtcPriceEur();
+    const btcAmount = eurAmount / btcPrice;
     
     // If user already has a deposit address, return it
     if (user.deposit_address) {
       return res.json({
         success: true,
         address: user.deposit_address,
+        btc_amount: btcAmount.toFixed(8),
+        btc_price: btcPrice,
+        eur_amount: eurAmount,
         message: 'Your unique BTC deposit address'
       });
     }
@@ -51,10 +61,6 @@ router.get('/deposit-address', authMiddleware, async (req, res) => {
     await user.save();
     
     console.log(`Generated deposit address for user ${user.odint_username}: ${address} (index: ${index})`);
-    
-    // Get current BTC price and calculate amount
-    const btcPrice = await getBtcPriceEur();
-    const btcAmount = eurAmount / btcPrice;
     
     res.json({
       success: true,
