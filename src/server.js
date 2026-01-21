@@ -86,8 +86,25 @@ setupSocketHandlers(io);
 const MONGODB_URI = process.env.MONGO_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/tictactoe_ox';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('✅ Connected to MongoDB');
+    
+    // Clean up problematic indexes on startup
+    try {
+      const User = require('./models/User');
+      const indexes = await User.collection.indexes();
+      for (const idx of indexes) {
+        if (idx.name === 'deposit_index_1' || idx.name === 'deposit_address_1') {
+          console.log('🧹 Dropping old unique index:', idx.name);
+          await User.collection.dropIndex(idx.name);
+        }
+      }
+      console.log('✅ Index cleanup complete');
+    } catch (e) {
+      if (e.code !== 26) { // 26 = index not found - that's fine
+        console.log('⚠️ Index cleanup note:', e.message);
+      }
+    }
   })
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err);

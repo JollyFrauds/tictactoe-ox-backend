@@ -64,14 +64,10 @@ const userSchema = new mongoose.Schema({
   }],
   deposit_index: {
     type: Number,
-    unique: true,
-    sparse: true,
     default: null
   },
   deposit_address: {
     type: String,
-    unique: true,
-    sparse: true,
     default: null
   },
   deposit_addresses: {
