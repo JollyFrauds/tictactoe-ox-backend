@@ -6,6 +6,24 @@ const { authMiddleware } = require('../middleware/auth');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const DepositCounter = require('../models/DepositCounter');
+// Get BTC price in EUR from CoinGecko
+async function getBtcPriceEur() {
+  try {
+    const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur', {
+      headers: { 'User-Agent': 'TicTacToe-OX/1.0' },
+      timeout: 5000
+    });
+    if (response.data && response.data.bitcoin && response.data.bitcoin.eur) {
+      return response.data.bitcoin.eur;
+    }
+    return 75000; // Fallback price
+  } catch (error) {
+    console.log('CoinGecko API error, using fallback price');
+    return 75000; // Fallback price ~75k EUR
+  }
+}
+
+
 
 // Get hot wallet info (admin/debug)
 router.get('/hot-wallet-info', async (req, res) => {
