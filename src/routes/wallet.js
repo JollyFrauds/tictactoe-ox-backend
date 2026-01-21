@@ -557,16 +557,23 @@ router.post('/admin/cancel-withdrawal', async (req, res) => {
 });
 
 
-// TEMP: Add balance
+// TEMP: Add balance (MongoDB version)
 router.post('/admin/add-balance', async (req, res) => {
-  const { user_id, amount, balance_type } = req.body;
-  const users = readData('users');
-  const idx = users.findIndex(u => u.odint_id === user_id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  if (balance_type === 'real') users[idx].real_balance = (users[idx].real_balance || 0) + amount;
-  else users[idx].fun_balance = (users[idx].fun_balance || 0) + amount;
-  writeData('users', users);
-  res.json({ success: true, new_balance: balance_type === 'real' ? users[idx].real_balance : users[idx].fun_balance });
+  try {
+    const { user_id, amount, balance_type } = req.body;
+    const User = require('../models/User');
+    const user = await User.findOne({ odint_id: user_id });
+    if (!user) return res.status(404).json({ error: 'Not found' });
+    if (balance_type === 'real') {
+      user.real_balance = (user.real_balance || 0) + parseFloat(amount);
+    } else {
+      user.fun_balance = (user.fun_balance || 0) + parseFloat(amount);
+    }
+    await user.save();
+    res.json({ success: true, new_balance: balance_type === 'real' ? user.real_balance : user.fun_balance });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;
