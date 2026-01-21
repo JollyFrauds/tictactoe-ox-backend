@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -34,6 +35,9 @@ const io = new Server(server, {
 // Security Middleware
 app.use(helmet());
 app.use(cors());
+
+// Serve static files
+app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json());
 
 // Rate limiting
