@@ -87,20 +87,21 @@ async function loadDashboard() {
             headers: { 'x-admin-password': ADMIN_PASSWORD }
         });
         const data = await res.json();
+        const stats = data.stats; // API returns { success, stats: {...} }
         
-        document.getElementById('totalUsers').textContent = data.users.total;
-        document.getElementById('newUsers').textContent = data.users.newLast24h;
-        document.getElementById('totalGames').textContent = data.games.total;
-        document.getElementById('activeGames').textContent = data.games.active;
-        document.getElementById('totalFun').textContent = data.balances.totalFun.toLocaleString();
-        document.getElementById('totalReal').textContent = '€' + data.balances.totalReal.toLocaleString();
-        document.getElementById('walletBalance').textContent = data.wallet.balanceSats.toLocaleString() + ' sats';
-        document.getElementById('totalDeposits').textContent = data.deposits;
+        document.getElementById('totalUsers').textContent = stats.users.total;
+        document.getElementById('newUsers').textContent = stats.users.newLast24h;
+        document.getElementById('totalGames').textContent = stats.games.total;
+        document.getElementById('activeGames').textContent = stats.games.active;
+        document.getElementById('totalFun').textContent = stats.balances.totalFun.toLocaleString();
+        document.getElementById('totalReal').textContent = '€' + stats.balances.totalReal.toLocaleString();
+        document.getElementById('walletBalance').textContent = stats.wallet.balanceSats.toLocaleString() + ' sats';
+        document.getElementById('totalDeposits').textContent = stats.deposits;
         
         // Games by status
         let statusHtml = '';
-        if (data.games.byStatus && data.games.byStatus.length > 0) {
-            data.games.byStatus.forEach(function(s) {
+        if (stats.games.byStatus && stats.games.byStatus.length > 0) {
+            stats.games.byStatus.forEach(function(s) {
                 statusHtml += '<div class="stat-item"><span>' + s._id + '</span><span class="stat-value">' + s.count + '</span></div>';
             });
         }
