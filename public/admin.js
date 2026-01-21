@@ -160,7 +160,8 @@ function renderUsers(users) {
         html += '<td>' + (u.email || '-') + '</td>';
         html += '<td><span class="balance fun">' + u.fun_balance + '</span></td>';
         html += '<td><span class="balance real">€' + u.real_balance + '</span></td>';
-        html += '<td>' + new Date(u.createdAt).toLocaleDateString() + '</td>';
+        var regDate = u.created_at || u.createdAt;
+        html += '<td>' + (regDate ? new Date(regDate).toLocaleDateString('it-IT') : '-') + '</td>';
         html += '<td>';
         html += '<button class="btn-small edit-user-btn" data-userid="' + u._id + '">✏️</button>';
         html += '<button class="btn-small danger delete-user-btn" data-userid="' + u._id + '">🗑️</button>';
@@ -280,19 +281,28 @@ async function addBalance() {
         return;
     }
     
+    // Calculate new balance
+    var balanceField = type + '_balance';
+    var currentBalance = user[balanceField] || 0;
+    var newBalance = currentBalance + amount;
+    
+    // Build update body
+    var updateBody = {};
+    updateBody[balanceField] = newBalance;
+    
     try {
-        const res = await fetch(API_URL + '/api/admin/users/' + user._id + '/balance', {
-            method: 'POST',
+        const res = await fetch(API_URL + '/api/admin/users/' + user._id, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'x-admin-password': ADMIN_PASSWORD
             },
-            body: JSON.stringify({ type: type, amount: amount })
+            body: JSON.stringify(updateBody)
         });
         
         const data = await res.json();
         if (res.ok) {
-            alert('Balance aggiornato! Nuovo ' + type + ': ' + data.user[type + '_balance']);
+            alert('Balance aggiornato! ' + type.toUpperCase() + ': ' + currentBalance + ' → ' + newBalance);
             loadUsers();
             // Clear inputs
             document.getElementById('balanceUserId').value = '';
