@@ -2,14 +2,14 @@ const express = require("express");
 const router = express.Router();
 const { walletService } = require("../services/walletService");
 const User = require("../models/User");
-const auth = require("../middleware/auth");
+const { authMiddleware } = require("../middleware/auth");
 
 // Initialize wallet
 if (process.env.WALLET_SEED) {
   walletService.initialize(process.env.WALLET_SEED);
 }
 
-router.get("/deposit-address", auth, async (req, res) => {
+router.get("/deposit-address", authMiddleware, async (req, res) => {
   try {
     const address = walletService.deriveDepositAddress(0);
     res.json({ success: true, address: address.address });
@@ -28,7 +28,7 @@ router.get("/hot-wallet-status", async (req, res) => {
   }
 });
 
-router.post("/withdraw", auth, async (req, res) => {
+router.post("/withdraw", authMiddleware, async (req, res) => {
   try {
     const { address, amountEur } = req.body;
     const user = await User.findById(req.user.id);
