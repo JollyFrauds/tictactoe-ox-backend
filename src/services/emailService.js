@@ -41,6 +41,7 @@ class EmailService {
   }
 
   async sendWithdrawalNotification(withdrawal) {
+    await this.initialize();
     const subject = `🔔 Nuova Richiesta Prelievo - €${withdrawal.amount}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
