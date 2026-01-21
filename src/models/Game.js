@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const gameSchema = new mongoose.Schema({
+  game_id: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   code: {
     type: String,
     sparse: true

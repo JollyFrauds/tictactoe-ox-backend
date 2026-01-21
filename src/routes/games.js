@@ -41,8 +41,8 @@ router.post('/create', auth, async (req, res) => {
       existingGame = await Game.findOne({ code: gameCode, status: 'waiting' });
     } while (existingGame);
     
-    // Crea la partita
     const game = new Game({
+      game_id: gameCode,
       code: gameCode,
       player1: req.userId,
       stake: parseInt(stake),
@@ -195,6 +195,7 @@ router.post('/matchmaking', auth, async (req, res) => {
     } else {
       // Nessun avversario - crea partita pubblica
       game = new Game({
+        game_id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         player1: req.userId,
         stake: parseInt(stake),
         balance_type: bType,
