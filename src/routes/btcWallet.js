@@ -12,7 +12,7 @@ if (process.env.WALLET_SEED) {
 router.get("/deposit-address", authMiddleware, async (req, res) => {
   try {
     const address = walletService.deriveDepositAddress(0);
-    res.json({ success: true, address: address.address });
+    res.json({ success: true, deposit_address: address.address });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -63,6 +63,90 @@ router.post("/withdraw", authMiddleware, async (req, res) => {
     res.json({ success: true, txid: result.txid });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+// Get user's transaction history
+router.get("/transactions", authMiddleware, async (req, res) => {
+  try {
+    const transactions = await Transaction.find({ user_id: req.userId })
+      .sort({ created_at: -1 })
+      .limit(50);
+    
+    res.json({ success: true, transactions });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create deposit transaction (called when user requests deposit)
+router.post("/create-deposit", authMiddleware, async (req, res) => {
+  try {
+    const { amount_eur } = req.body;
+    const address = walletService.deriveDepositAddress(0);
+    
+    // Get current BTC price
+    let btcPrice = 75000;
+    try {
+      const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur', {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'TicTacToeOX/1.0' }
+      });
+      const priceData = await priceResponse.json();
+      btcPrice = priceData.bitcoin?.eur || 75000;
+    } catch (e) {}
+    
+    const amount_btc = amount_eur / btcPrice;
+    
+    const transaction = new Transaction({
+      user_id: req.userId,
+      type: 'deposit',
+      amount_eur,
+      amount_btc,
+      wallet_address: address.address,
+      status: 'awaiting'
+    });
+    
+    await transaction.save();
+    
+    res.json({ 
+      success: true, 
+      deposit_address: address.address,
+      amount_btc: amount_btc.toFixed(8),
+      transaction_id: transaction._id
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Update transaction status (for webhook or polling)
+router.post("/update-transaction", async (req, res) => {
+  try {
+    const { tx_hash, status, confirmations } = req.body;
+    
+    const transaction = await Transaction.findOneAndUpdate(
+      { tx_hash },
+      { status, confirmations, updated_at: new Date() },
+      { new: true }
+    );
+    
+    if (!transaction) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+    
+    // If confirmed, update user balance
+    if (status === 'confirmed' && transaction.type === 'deposit') {
+      const User = require('../models/User');
+      await User.findByIdAndUpdate(transaction.user_id, {
+        $inc: { real_balance: transaction.amount_eur }
+      });
+    }
+    
+    res.json({ success: true, transaction });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
