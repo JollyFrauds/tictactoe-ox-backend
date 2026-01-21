@@ -62,6 +62,18 @@ const userSchema = new mongoose.Schema({
   friend_requests: [{
     type: String, // odint_id of requesters
   }],
+  deposit_index: {
+    type: Number,
+    unique: true,
+    sparse: true,
+    default: null
+  },
+  deposit_address: {
+    type: String,
+    unique: true,
+    sparse: true,
+    default: null
+  },
   deposit_addresses: {
     type: Map,
     of: String,

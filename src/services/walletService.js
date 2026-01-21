@@ -195,4 +195,17 @@ class WalletService {
 // Singleton instance
 const walletService = new WalletService();
 
-module.exports = { WalletService, walletService };
+
+// Check balance of a specific address
+async function checkAddressBalance(address) {
+  try {
+    const response = await axios.get(`https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance`);
+    return response.data.balance || 0;
+  } catch (error) {
+    console.error('Error checking address balance:', error.message);
+    return 0;
+  }
+}
+
+module.exports = {
+  checkAddressBalance, WalletService, walletService };
