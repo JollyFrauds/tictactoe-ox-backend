@@ -1,5 +1,5 @@
 const https = require('https');
-const BREVO_KEY = 'xkeysib-61466333e778a625373d39bcceab813e4aa2d2cbc9';
+const BREVO_KEY = process.env.BREVO_API_KEY;
 const ADMIN = 'mangogabriele23@gmail.com';
 
 class EmailService {
