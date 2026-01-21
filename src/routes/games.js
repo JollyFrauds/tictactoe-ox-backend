@@ -296,7 +296,7 @@ router.post('/move', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Posizione non valida' });
     }
     
-    const game = await Game.findById(gameId);
+    const game = await Game.findById(gameId).populate("player1").populate("player2");
     
     if (!game) {
       return res.status(404).json({ success: false, message: 'Partita non trovata' });
