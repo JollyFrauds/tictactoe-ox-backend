@@ -16,6 +16,11 @@ class WalletService {
   constructor() {
     this.masterKey = null;
     this.depositIndex = 0;
+    
+    // Auto-initialize from environment variable
+    if (process.env.WALLET_SEED) {
+      this.initialize(process.env.WALLET_SEED);
+    }
   }
 
   // Initialize wallet from seed phrase (stored in env)
