@@ -41,7 +41,8 @@ router.get('/deposit-address', authMiddleware, async (req, res) => {
     
     // Generate new unique address for this user
     const index = await DepositCounter.getNextIndex();
-    const address = walletService.deriveDepositAddress(index);
+    const depositResult = walletService.deriveDepositAddress(index);
+    const address = depositResult.address;  // Extract address string from result object
     
     // Save to user
     user.deposit_index = index;
