@@ -418,19 +418,4 @@ router.post("/admin/credit", authMiddleware, async (req, res) => { try { const {
 
 
 
-// TEMP: Restore balance endpoint
-router.post("/restore-balance", async (req, res) => {
-  try {
-    const { odint_id, amount } = req.body;
-    const User = require('../models/User');
-    const user = await User.findOne({ odint_id });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    user.real_balance += parseFloat(amount);
-    await user.save();
-    res.json({ success: true, real_balance: user.real_balance, fun_balance: user.fun_balance });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 module.exports = router;
