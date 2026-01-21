@@ -1,4 +1,5 @@
 const express = require('express');
+const axios = require('axios');
 const router = express.Router();
 const { walletService } = require('../services/walletService');
 const { authMiddleware } = require('../middleware/auth');
@@ -51,9 +52,16 @@ router.get('/deposit-address', authMiddleware, async (req, res) => {
     
     console.log(`Generated deposit address for user ${user.odint_username}: ${address} (index: ${index})`);
     
+    // Get current BTC price and calculate amount
+    const btcPrice = await getBtcPriceEur();
+    const btcAmount = eurAmount / btcPrice;
+    
     res.json({
       success: true,
       address: address,
+      btc_amount: btcAmount.toFixed(8),
+      btc_price: btcPrice,
+      eur_amount: eurAmount,
       message: 'Your unique BTC deposit address'
     });
   } catch (error) {
