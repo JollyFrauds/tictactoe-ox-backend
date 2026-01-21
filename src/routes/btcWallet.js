@@ -22,7 +22,23 @@ router.get("/hot-wallet-status", async (req, res) => {
   try {
     const addr = walletService.deriveDepositAddress(0).address;
     const balance = await walletService.getAddressBalance(addr);
-    res.json({ success: true, address: addr, balanceSats: balance.balance });
+    
+    // Get BTC price from CoinGecko
+    let btcPrice = null;
+    try {
+      const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur');
+      const priceData = await priceResponse.json();
+      btcPrice = priceData.bitcoin?.eur || null;
+    } catch (priceError) {
+      console.error('Failed to fetch BTC price:', priceError.message);
+    }
+    
+    res.json({ 
+      success: true, 
+      address: addr, 
+      balanceSats: balance.balance,
+      btcPrice: btcPrice
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

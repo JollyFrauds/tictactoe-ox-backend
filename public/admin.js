@@ -412,7 +412,7 @@ async function loadWallet() {
         if (walletData.success) {
             document.getElementById('hotWalletAddress').textContent = walletData.address || '-';
             document.getElementById('hotWalletBalance').textContent = (walletData.balanceSats || 0).toLocaleString() + ' sats';
-            document.getElementById('btcPrice').textContent = walletData.btcPriceUSD ? '$' + walletData.btcPriceUSD.toLocaleString() : '-';
+            document.getElementById('btcPrice').textContent = walletData.btcPrice ? '€' + walletData.btcPrice.toLocaleString() : '-';
         }
         
         // Deposits
