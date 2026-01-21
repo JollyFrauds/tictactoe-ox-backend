@@ -61,7 +61,7 @@ router.post('/create', auth, async (req, res) => {
         id: game._id,
         code: gameCode,
         stake: stake,
-        balanceType: balanceType,
+        balance_type: bType,
         status: 'waiting'
       }
     });
