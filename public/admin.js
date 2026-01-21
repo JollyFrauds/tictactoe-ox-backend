@@ -143,7 +143,8 @@ async function loadUsers() {
         const res = await fetch(API_URL + '/api/admin/users', {
             headers: { 'x-admin-password': ADMIN_PASSWORD }
         });
-        allUsers = await res.json();
+        const data = await res.json();
+        allUsers = data.users || data || []; // Handle both { users: [...] } and [...] formats
         renderUsers(allUsers);
     } catch (e) {
         console.error('Users error:', e);
@@ -310,7 +311,8 @@ async function loadGames() {
         const res = await fetch(API_URL + '/api/admin/games', {
             headers: { 'x-admin-password': ADMIN_PASSWORD }
         });
-        allGames = await res.json();
+        const data = await res.json();
+        allGames = data.games || data || []; // Handle both { games: [...] } and [...] formats
         renderGames(allGames);
     } catch (e) {
         console.error('Games error:', e);
