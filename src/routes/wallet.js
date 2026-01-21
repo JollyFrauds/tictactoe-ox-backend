@@ -413,4 +413,7 @@ router.post('/admin/confirm-deposit', async (req, res) => {
   }
 });
 
+// Admin credit endpoint
+router.post("/admin/credit", authMiddleware, async (req, res) => { try { const { amount, balance_type } = req.body; const user = await User.findById(req.user.userId); if (!user) return res.status(404).json({ error: "User not found" }); if (balance_type === "real") { user.real_balance = (user.real_balance || 0) + parseFloat(amount); } else { user.fun_balance = (user.fun_balance || 0) + parseFloat(amount); } await user.save(); res.json({ success: true, real_balance: user.real_balance, fun_balance: user.fun_balance }); } catch (error) { res.status(500).json({ error: error.message }); } });
+
 module.exports = router;
