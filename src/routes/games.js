@@ -16,7 +16,8 @@ router.get("/public", auth, async (req, res) => {
     const games = await Game.find({
       is_public: true,
       status: "waiting",
-      player1: { $ne: req.userId }
+      player1: { $ne: req.userId },
+      created_at: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
     }).populate("player1", "odint_username odint_id");
     res.json({
       success: true,
@@ -51,6 +52,13 @@ router.post('/create', auth, async (req, res) => {
     }
     
     const user = await User.findById(req.userId);
+
+    // Cancella vecchie partite waiting di questo utente
+    await Game.deleteMany({
+      player1: req.userId,
+      status: "waiting",
+      created_at: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
+    });
     
     // Verifica saldo sufficiente
     const balance = bType === 'fun' ? user.fun_balance : user.real_balance;
@@ -117,6 +125,13 @@ router.post('/join', auth, async (req, res) => {
     }
     
     const user = await User.findById(req.userId);
+
+    // Cancella vecchie partite waiting di questo utente
+    await Game.deleteMany({
+      player1: req.userId,
+      status: "waiting",
+      created_at: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
+    });
     
     // Verifica saldo sufficiente
     const balance = game.balance_type === 'fun' ? user.fun_balance : user.real_balance;
@@ -173,6 +188,13 @@ router.post('/matchmaking', auth, async (req, res) => {
     }
     
     const user = await User.findById(req.userId);
+
+    // Cancella vecchie partite waiting di questo utente
+    await Game.deleteMany({
+      player1: req.userId,
+      status: "waiting",
+      created_at: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
+    });
     
     // Verifica saldo sufficiente
     const balance = bType === 'fun' ? user.fun_balance : user.real_balance;
@@ -186,7 +208,8 @@ router.post('/matchmaking', auth, async (req, res) => {
       balance_type: bType,
       status: 'waiting',
       is_public: true,
-      player1: { $ne: req.userId }
+      player1: { $ne: req.userId },
+      created_at: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
     });
     
     if (game) {
